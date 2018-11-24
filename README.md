@@ -2,4 +2,4 @@
 
 A work in process <br>
 
-$y = \dfrac{1}{1 + e^{-x)}$
+$$y = \dfrac{1}{1 + e^{-x}}$$
