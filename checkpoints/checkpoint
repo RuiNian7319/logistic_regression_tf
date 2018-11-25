@@ -1,2 +1,2 @@
-model_checkpoint_path: "model_64_future.ckpt"
-all_model_checkpoint_paths: "model_64_future.ckpt"
+model_checkpoint_path: "threshold_135.ckpt"
+all_model_checkpoint_paths: "threshold_135.ckpt"

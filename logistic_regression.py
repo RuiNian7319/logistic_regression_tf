@@ -32,11 +32,11 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/important_column.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/64_data.csv')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=25)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=10)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/model_64.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
@@ -251,21 +251,21 @@ else:
         biases = sess.run(b)
 
 
-def plots(percent, real_value, window_size):
+def plots(percent, real_value, start, end):
     """
     Plots the real vs percentage
     """
     plt.subplot(2, 1, 1)
     plt.xlabel("Time")
     plt.ylabel("Percent below Threshold, %")
-    plt.step(np.linspace(0, window_size, window_size), percent.reshape(percent.shape[1], 1)[0:window_size] * 100)
+    plt.step(np.linspace(0, end - start, end - start), percent.reshape(percent.shape[1], 1)[start:end] * 100)
 
     plt.axhline(y=50, c='r', linestyle='--')
 
     plt.subplot(2, 1, 2)
     plt.xlabel("Time")
     plt.ylabel("Plant Data")
-    plt.step(np.linspace(0, window_size, window_size), real_value.reshape(real_value.shape[1], 1)[0:window_size], c='r')
+    plt.step(np.linspace(0, end - start, end - start), real_value.reshape(real_value.shape[1], 1)[start:end], c='r')
 
     plt.show()
 
