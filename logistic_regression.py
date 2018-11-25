@@ -1,9 +1,9 @@
 """
-Logistic Regression Patch 1.2
+Logistic Regression Patch 1.3
 
 Patch notes:  Added tensorboard and saver
 
-Date of last edit: November-23-2018
+Date of last edit: November-25-2018
 Rui Nian
 
 Current issues: Output size is hard coded
@@ -32,7 +32,7 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='64_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/64_data.csv')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
@@ -64,11 +64,53 @@ def min_max_normalization(data):
     col_max = np.max(data, axis=1).reshape(data.shape[0], 1)
     col_min = np.min(data, axis=1).reshape(data.shape[0], 1)
 
-    return np.divide((data - col_max), (col_max - col_min)), [col_max, col_min]
+    denominator = abs(col_max - col_min)
+
+    # Fix divide by zero, replace value with 1 because these usually happen for boolean columns
+    for index, value in enumerate(denominator):
+        if value[0] == 0:
+            denominator[index] = 1
+
+    return np.divide((data - col_max), denominator)
+
+
+# Define Normalization
+def normalization(data):
+    col_mean = np.mean(data, axis=1).reshape(data.shape[0], 1)
+    col_std = np.std(data, axis=1).reshape(data.shape[0], 1)
+
+    # Fix divide by 0 since sometimes, standard deviation can be zero
+    for index, value in enumerate(col_std):
+        if value[0] == 0:
+            col_std[index] = 1
+
+    return np.divide((data - col_mean), col_std)
+
+
+# Modified Normalization robust to outliers
+def mod_normalization(data):
+    col_median = np.median(data, axis=1).reshape(data.shape[0], 1)
+    mad = np.median(abs(data - col_median), axis=1).reshape(data.shape[0], 1)
+
+    # Fix divide by 0 for when MAD = 0
+    for index, value in enumerate(mad):
+        if value[0] == 0:
+            mad[index] = 1
+
+    return np.divide(0.6745 * (data - col_median), mad)
 
 
 # Loading data
-raw_data = pd.read_csv(Args['data']).values
+raw_data = pd.read_csv(Args['data'])
+
+# Get feature headers
+feature_names = list(raw_data)
+# Delete Unnamed: 0 and label column
+del feature_names[0]
+del feature_names[0]
+
+# Turn Pandas dataframe into NumPy Array
+raw_data = raw_data.values
 print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw_data.shape[0]))
 
 # Delete the index column given by Pandas
@@ -98,8 +140,12 @@ mini_batch_size = Args['minibatch_size']
 total_batch_number = int(train_X.shape[1] / mini_batch_size)
 epochs = Args['epochs']
 
-train_X, train_max_min = min_max_normalization(train_X)
-test_X, test_max_min = min_max_normalization(test_X)
+train_X = min_max_normalization(train_X)
+test_X = min_max_normalization(test_X)
+
+# Test cases
+assert(np.isnan(train_X).any() == False)
+assert(np.isnan(test_X).any() == False)
 
 # Model placeholders
 with tf.name_scope("Inputs"):
@@ -153,15 +199,8 @@ if Args['test']:
         Predictions = sess.run(pred, feed_dict={x: test_X, y: test_y})
         print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
 
-        weights = sess.run(W)
-        biases = sess.run(b)
-
 else:
     with tf.Session() as sess:
-
-        # Initiate tensorboard writer
-        summary_writer = tf.summary.FileWriter(Args['tensorboard_path'], graph=sess.graph)
-        merge = tf.summary.merge_all()
 
         if Args['restore_graph']:
             # Restore tensorflow graph
@@ -178,23 +217,19 @@ else:
                 minibatch_train_X = train_X[:, batch_index:(batch_index + mini_batch_size)]
                 minibatch_train_y = train_y[:, batch_index:(batch_index + mini_batch_size)]
 
-                _, summary = sess.run([optimizer, merge], feed_dict={x: minibatch_train_X, y: minibatch_train_y})
+                _ = sess.run(optimizer, feed_dict={x: minibatch_train_X, y: minibatch_train_y})
                 current_loss = sess.run(loss, feed_dict={x: minibatch_train_X, y: minibatch_train_y})
 
-                # Add current summary into tensorboard to see evolution of weights
-                summary_writer.add_summary(summary, i)
-
-                train_accuracy = sess.run(accuracy, feed_dict={x: train_X, y: train_y})
-                test_accuracy, predictions = sess.run([accuracy, pred], feed_dict={x: test_X, y: test_y})
+                train_accuracy, train_predictions = sess.run([accuracy, pred], feed_dict={x: train_X, y: train_y})
+                test_accuracy, test_predictions = sess.run([accuracy, pred], feed_dict={x: test_X, y: test_y})
                 loss_history.append(current_loss)
 
-            print("Epoch: {} | loss: {:5f} | train accuracy: {:5f} | test accuracy: {:5f}".format(epoch + 1,
-                                                                                                  current_loss,
-                                                                                                  train_accuracy,
-                                                                                                  test_accuracy))
+                if i % 5 == 0:
 
-        weights = sess.run(W)
-        biases = sess.run(b)
+                    print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f}".format(epoch + 1,
+                                                                                                current_loss,
+                                                                                                train_accuracy,
+                                                                                                test_accuracy))
 
         if Args['save_graph']:
             save_path = saver.save(sess, Args["model_path"])
