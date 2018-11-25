@@ -45,6 +45,20 @@ def mod_normalization(data):
     return np.divide(0.6745 * (data - col_median), mad)
 
 
+def important_features(weights, feature_list, threshold):
+    """
+    Returns all the important features above the threshold
+    """
+
+    index = np.linspace(0, weights.shape[0], weights.shape[0] + 1)
+    index = [int(i) for (i, j) in zip(index, weights) if abs(j) > threshold]
+    feature_list = [feature_list[i] for i in index]
+
+    return feature_list
+
+
+feature_list = ['chicken', 'beef', 'pork', 'lion', 'deer', 'dog']
+weights = np.array([5, 1, 1.5, 2, 3, 5]).reshape(6, 1)
+
 A = np.array([[1, 24, 421, 421, 0], [1, 42, 321, 422, 1], [1, 33, 355, 430, 0]]).T
 
-A_processed = mod_normalizatiin(A)

@@ -2,3 +2,4 @@
 64_data.csv
 .DS_Stores
 /data
+/tensorboard
