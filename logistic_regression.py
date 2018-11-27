@@ -32,7 +32,7 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/64_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/hossein_data.csv')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
@@ -105,6 +105,7 @@ raw_data = pd.read_csv(Args['data'])
 
 # Get feature headers
 feature_names = list(raw_data)
+
 # Delete Unnamed: 0 and label column
 del feature_names[0]
 del feature_names[0]
@@ -241,7 +242,7 @@ else:
                 test_accuracy, test_predictions = sess.run([accuracy, pred], feed_dict={x: test_X, y: test_y})
                 loss_history.append(current_loss)
 
-                if i % 5 == 0:
+                if i % 10 == 0:
 
                     # Add to summary writer
                     summary_writer.add_summary(summary, i)
@@ -289,3 +290,20 @@ def important_features(weights, feature_list, threshold):
     feature_list = [feature_list[i] for i in index]
 
     return feature_list
+
+
+def dataset_creator(data, columns, path):
+    """
+    data:  Original data, Pandas data frame structure
+    columns:  Columns to be kept within the original data
+
+    Assumes raw data's 1st column is 'Unnamed: 0', 2nd column is the label column, and there is only one label column
+    """
+    cols = [list(data)[1]] + columns
+    data = data[cols]
+
+    # Make sure the dimensions are correct after new dataset is created
+    assert(len(columns) + 1 == data.shape[1])
+
+    data.to_csv(path)
+    return data
