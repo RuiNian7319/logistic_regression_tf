@@ -40,10 +40,10 @@ parser.add_argument("--epochs", help="Number of times data should be recycled th
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/model_64.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
 
 # Test Model
-parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -178,11 +178,14 @@ pred = tf.round(tf.sigmoid(z))
 # Then reduce mean to divide correct by m examples
 correct = tf.cast(tf.equal(pred, y), dtype=tf.float32)
 accuracy = tf.reduce_mean(correct)
+precision = tf.metrics.precision(labels=y, predictions=pred)
+recall = tf.metrics.recall(labels=y, predictions=pred)
 
 loss_history = []
 
 # Initialize all variables
 init = tf.global_variables_initializer()
+init_l = tf.local_variables_initializer()
 
 # Tensorflow graph saver
 saver = tf.train.Saver()
@@ -191,6 +194,7 @@ if Args['test']:
     with tf.Session() as sess:
 
         saver.restore(sess, Args["model_path"])
+        sess.run(init_l)
 
         train_accuracy = sess.run(accuracy, feed_dict={x: train_X, y: train_y})
         test_accuracy = sess.run(accuracy, feed_dict={x: test_X, y: test_y})
@@ -199,6 +203,10 @@ if Args['test']:
 
         Predictions = sess.run(pred, feed_dict={x: test_X, y: test_y})
         print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
+
+        Precision, Recall = sess.run(recall, feed_dict={x: test_X, y: test_y})
+        print(Precision, Recall)
+        # print("The precision is: {:5f} | The recall is: {:5f}".format(Precision, Recall))
 
         # Output weights and biases
         weights = sess.run(W).reshape(train_X.shape[0], 1)
@@ -215,6 +223,7 @@ else:
             saver.restore(sess, Args['model_path'])
         else:
             sess.run(init)
+            sess.run(init_l)
 
         for epoch in range(epochs):
 
