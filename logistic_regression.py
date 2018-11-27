@@ -179,8 +179,8 @@ pred = tf.round(tf.sigmoid(z))
 # Then reduce mean to divide correct by m examples
 correct = tf.cast(tf.equal(pred, y), dtype=tf.float32)
 accuracy = tf.reduce_mean(correct)
-precision = tf.metrics.precision(labels=y, predictions=pred)
-recall = tf.metrics.recall(labels=y, predictions=pred)
+precision, prec_op = tf.metrics.precision(labels=y, predictions=pred)
+recall, recall_op = tf.metrics.recall(labels=y, predictions=pred)
 
 loss_history = []
 
@@ -205,9 +205,8 @@ if Args['test']:
         Predictions = sess.run(pred, feed_dict={x: test_X, y: test_y})
         print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
 
-        Precision, Recall = sess.run(recall, feed_dict={x: test_X, y: test_y})
-        print(Precision, Recall)
-        # print("The precision is: {:5f} | The recall is: {:5f}".format(Precision, Recall))
+        Precision, Recall = sess.run([prec_op, recall_op], feed_dict={x: test_X, y: test_y})
+        print("The precision is: {:5f} | The recall is: {:5f}".format(Precision, Recall))
 
         # Output weights and biases
         weights = sess.run(W).reshape(train_X.shape[0], 1)
