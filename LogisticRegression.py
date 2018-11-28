@@ -35,13 +35,20 @@ class LogisticRegression:
 
                 features: Features of the data set, X matrix.  Shape of [Nx, m]
                   labels: Labels corresponding to the features, y matrix. Shape of [1, m]
-                     nx: Number of features
-                     ny: Number of outputs
-                      m: Number of training examples
-             train_size: % of data used for training
+                      nx: Number of features
+                      ny: Number of outputs
+                       m: Number of training examples
+              train_size: % of data used for training
+
+                 train_X:
+                 train_y:
+                  test_X:
+                  test_y:
 
                       lr: Learning rate of logistic regression.  Default value = 0.003
           minibatch_size: Size of mini-batch for mini-batch gradient descent
+      total_Batch_number:
+                   epoch:
 
                        X: Placeholder for feeding minibatches of features
                        y: Placeholder for feeding minibatches of labels
@@ -55,7 +62,7 @@ class LogisticRegression:
 
     """
 
-    def __init__(self, sess, data, lr=0.003, minibatch_size=64, train_size=0.9):
+    def __init__(self, sess, data, lr=0.003, minibatch_size=64, train_size=0.9, epochs=5):
 
         """
         Input data must be of shape: [Nx, m] and the labels must be in the first column
@@ -71,10 +78,20 @@ class LogisticRegression:
         self.m = self.features.shape[1]
         self.train_size = train_size
 
+        train_index = int(self.train_size * self.m)
+        self.train_X = self.features[:, 0:train_index].reshape(self.nx, train_index)
+        self.train_X = self.min_max_normalization(self.train_X)
+        self.train_y = self.labels[0:train_index].reshape(self.ny, train_index)
+
+        self.test_X = self.features[:, train_index:].reshape(self.nx, self.m - train_index)
+        self.test_X = self.min_max_normalization(self.test_X)
+        self.test_y = self.labels[train_index:].reshape(self.ny, self.m - train_index)
+
         # Machine learning parameters
         self.lr = lr
         self.minibatch_size = minibatch_size
         self.total_batch_number = int((self.m / self.minibatch_size) * self.train_size)
+        self.epochs = epochs
 
         # Tensorflow variables
         self.X = tf.placeholder(dtype=tf.float32, shape=[self.nx, None])
@@ -93,7 +110,7 @@ class LogisticRegression:
         self.optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
 
         # Prediction
-        self.pred = tf.sigmoid(self.z)
+        self.pred = tf.round(tf.sigmoid(self.z))
 
         # Accuracies
         self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.pred, self.y), tf.float32))
@@ -199,22 +216,6 @@ if __name__ == "__main__":
     np.random.shuffle(raw_data)
     raw_data = raw_data.T
 
-    # Data partitation into features and labels
-    features = raw_data[1:, :]
-    labels = raw_data[0, :]
-
-    # Train / test split
-    train_size = 0.9
-    train_values = int(features.shape[1] * train_size)
-
-    train_X = features[:, 0:train_values]
-    train_y = labels[0:train_values].reshape(1, train_X.shape[1])
-
-    test_X = features[:, train_values:]
-    test_y = labels[train_values:].reshape(1, test_X.shape[1])
-
-    epochs = 2
-
     with tf.Session() as sess:
 
         log_reg = LogisticRegression(sess, raw_data, train_size=0.9)
@@ -223,16 +224,16 @@ if __name__ == "__main__":
         sess.run(log_reg.init)
         sess.run(log_reg.init_l)
 
-        for epoch in range(epochs):
+        for epoch in range(log_reg.epochs):
 
             for i in range(log_reg.total_batch_number):
                 batch_index = i * log_reg.minibatch_size
-                batch_X = train_X[:, batch_index:(batch_index + log_reg.minibatch_size)]
-                batch_y = train_y[:, batch_index:(batch_index + log_reg.minibatch_size)]
+                batch_X = log_reg.train_X[:, batch_index:(batch_index + log_reg.minibatch_size)]
+                batch_y = log_reg.train_y[:, batch_index:(batch_index + log_reg.minibatch_size)]
 
                 current_loss = log_reg.train(batch_X, batch_y)
-                train_accuracy, _, _ = log_reg.model_evaluation(train_X, train_y)
-                test_accuracy, _, _ = log_reg.model_evaluation(test_X, test_y)
+                train_accuracy, _, _ = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
+                test_accuracy, _, _ = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
 
                 if i % 10 == 0:
                     print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f}".format(epoch + 1,
@@ -240,5 +241,5 @@ if __name__ == "__main__":
                                                                                                 train_accuracy,
                                                                                                 test_accuracy))
 
-        Pred = log_reg.test(test_X, test_y)
-        Acc, Precision, Recall = log_reg.model_evaluation(test_X, test_y)
+        Pred = log_reg.test(log_reg.test_X, log_reg.test_y)
+        Acc, Precision, Recall = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
