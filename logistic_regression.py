@@ -1,9 +1,12 @@
 """
 Logistic Regression Patch 1.3
 
-Patch notes:  Added tensorboard, saver, and different normalization methods.  Currently, min-max is the best
+Patch notes:  Added tensorboard, saver
+              Different normalization methods
+              Currently, min-max is the best
+              Added Precision and Recall metrics
 
-Date of last edit: November-25-2018
+Date of last edit: November-27-2018
 Rui Nian
 
 Current issues: Output size is hard coded
@@ -32,18 +35,18 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/hossein_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/64_data.csv')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
 parser.add_argument("--epochs", help="Number of times data should be recycled through", default=10)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/model_64.ckpt')
+parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/hossein.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
 
 # Test Model
-parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -261,6 +264,7 @@ else:
 
 
 def plots(percent, real_value, start, end):
+
     """
     Plots the real vs percentage
     """
