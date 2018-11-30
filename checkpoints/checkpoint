@@ -1,2 +1,2 @@
-model_checkpoint_path: "hossein.ckpt"
-all_model_checkpoint_paths: "hossein.ckpt"
+model_checkpoint_path: "all_data_no_p.ckpt"
+all_model_checkpoint_paths: "all_data_no_p.ckpt"

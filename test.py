@@ -1,12 +1,23 @@
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 
 
-labels = tf.constant([0, 0, 0, 0, 1], dtype=tf.int32)
-predictions = tf.constant([0, 0, 0, 0, 0], dtype=tf.int32)
-specificity = 0
+def dataset_creator(data, columns, path):
+    """
+    data:  Original data, Pandas data frame structure
+    columns:  Columns to be kept within the original data
 
-metrics = tf.metrics.sensitivity_at_specificity(labels, predictions, specificity)
+    Assumes raw data's 1st column is 'Unnamed: 0', 2nd column is the label column, and there is only one label column
+    """
+    cols = [list(data)[1]] + columns
+    data = data[cols]
 
-with tf.Session() as sess:
-    Sens, Update_op = sess.run(metrics)
+    # Make sure the dimensions are correct after new dataset is created
+    assert(len(columns) + 1 == data.shape[1])
+
+    data.to_csv(path)
+    return data
+
+
+data = pd.read_csv('data/hossein_labeled_data.csv')

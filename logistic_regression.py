@@ -35,18 +35,18 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/64_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/all_data_downsampled_remove_limits.csv')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=10)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=256)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/hossein.ckpt')
+parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/all_data.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
 
 # Test Model
-parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -56,7 +56,7 @@ Logistic Regression
 """
 
 # Seed for reproducability
-seed = 8
+seed = 5
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
@@ -118,7 +118,7 @@ raw_data = raw_data.values
 print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw_data.shape[0]))
 
 # Delete the index column given by Pandas
-raw_data = np.delete(raw_data, [0], axis=1)
+# raw_data = np.delete(raw_data, [0], axis=1)
 np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
@@ -291,8 +291,9 @@ def important_features(weights, feature_list, threshold):
     index = np.linspace(0, weights.shape[0], weights.shape[0] + 1)
     index = [int(i) for (i, j) in zip(index, weights) if abs(j) > threshold]
     feature_list = [feature_list[i] for i in index]
+    weights_list = [weights[i][0] for i in index]
 
-    return feature_list
+    return pd.DataFrame([feature_list, weights_list], index=["Features", "Weights"]).T
 
 
 def dataset_creator(data, columns, path):
