@@ -1,2 +1,2 @@
-model_checkpoint_path: "all_data_no_p.ckpt"
-all_model_checkpoint_paths: "all_data_no_p.ckpt"
+model_checkpoint_path: "time_series.ckpt"
+all_model_checkpoint_paths: "time_series.ckpt"

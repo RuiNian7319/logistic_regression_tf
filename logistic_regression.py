@@ -35,18 +35,18 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/all_data_downsampled_remove_limits.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/time_series_data.csv')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=256)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5500)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/all_data.ckpt')
-parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
+parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/time_series.ckpt')
+parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=True)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
 
 # Test Model
-parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -311,3 +311,6 @@ def dataset_creator(data, columns, path):
 
     data.to_csv(path)
     return data
+
+
+A = important_features(weights, feature_names, 2)
