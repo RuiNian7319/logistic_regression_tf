@@ -7,3 +7,4 @@
 # Company data and tensorboard logs
 /data
 /tensorboard
+/
