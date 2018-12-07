@@ -35,18 +35,18 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/time_series_data.csv')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/labeled_data.csv')
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.95)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5500)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=91)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=20000)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/time_series.ckpt')
-parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=True)
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
+parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/time1.ckpt')
+parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
 
 # Test Model
-parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -56,7 +56,7 @@ Logistic Regression
 """
 
 # Seed for reproducability
-seed = 5
+seed = 18
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
@@ -110,7 +110,7 @@ raw_data = pd.read_csv(Args['data'])
 feature_names = list(raw_data)
 
 # Delete Unnamed: 0 and label column
-del feature_names[0]
+# del feature_names[0]
 del feature_names[0]
 
 # Turn Pandas dataframe into NumPy Array
@@ -119,7 +119,7 @@ print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw
 
 # Delete the index column given by Pandas
 # raw_data = np.delete(raw_data, [0], axis=1)
-np.random.shuffle(raw_data)
+# np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
 # Data partitation into features and labels
@@ -208,6 +208,9 @@ if Args['test']:
         Predictions = sess.run(pred, feed_dict={x: test_X, y: test_y})
         print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
 
+        Predictions_train = sess.run(pred, feed_dict={x: train_X, y: train_y})
+        print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
+
         Precision, Recall = sess.run([prec_op, recall_op], feed_dict={x: test_X, y: test_y})
         print("The precision is: {:5f} | The recall is: {:5f}".format(Precision, Recall))
 
@@ -288,7 +291,7 @@ def important_features(weights, feature_list, threshold):
     Returns all the important features above the threshold
     """
 
-    index = np.linspace(0, weights.shape[0], weights.shape[0] + 1)
+    index = np.linspace(0, weights.shape[0] - 1, weights.shape[0])
     index = [int(i) for (i, j) in zip(index, weights) if abs(j) > threshold]
     feature_list = [feature_list[i] for i in index]
     weights_list = [weights[i][0] for i in index]
@@ -309,8 +312,40 @@ def dataset_creator(data, columns, path):
     # Make sure the dimensions are correct after new dataset is created
     assert(len(columns) + 1 == data.shape[1])
 
-    data.to_csv(path)
+    data.to_csv(path, index=False)
     return data
+
+
+def k_folds(data, fold_number, train_size=0.8):
+
+    """
+    Inputs
+               data:  Data with shape: [m, Nx]
+        fold_number:  The current k-fold you are on.
+         train_size:  Size of training data.  Test size is 1 - train_size
+    Returns
+        train_X, train_y, test_X, test_y
+    """
+
+    examples = data.shape[0]
+
+    train_shape = int(train_size * examples)
+    test_shape = int(examples - train_shape)
+
+    index_end = test_shape * fold_number
+    index_start = index_end - test_shape
+
+    mask = np.linspace(index_start, index_end, index_end - index_start + 1)
+    train_data = np.delete(data, mask, axis=0)
+    test_data = data[index_start:index_end, :]
+
+    train_X = train_data[:, 1:]
+    train_y = train_data[:, 0]
+
+    test_X = test_data[:, 1:]
+    test_y = test_data[:, 0]
+
+    return train_X, test_X, train_y, test_y
 
 
 A = important_features(weights, feature_names, 2)
