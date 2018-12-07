@@ -35,8 +35,8 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/labeled_data.csv')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.95)
+parser.add_argument("--data", help="Data to be loaded into the model", default='data/time1.csv')
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.8)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=91)
 parser.add_argument("--epochs", help="Number of times data should be recycled through", default=20000)
@@ -119,7 +119,7 @@ print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw
 
 # Delete the index column given by Pandas
 # raw_data = np.delete(raw_data, [0], axis=1)
-# np.random.shuffle(raw_data)
+np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
 # Data partitation into features and labels
