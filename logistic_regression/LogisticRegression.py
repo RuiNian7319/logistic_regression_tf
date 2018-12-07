@@ -160,7 +160,7 @@ class LogisticRegression:
             if value[0] == 0:
                 denominator[index] = 1
 
-        return np.divide((data - col_max), denominator)
+        return np.divide((data - col_min), denominator)
 
     # Define Normalization
     @staticmethod

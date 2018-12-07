@@ -6,7 +6,7 @@ Patch notes:  Added tensorboard, saver
               Currently, min-max is the best
               Added Precision and Recall metrics
 
-Date of last edit: November-27-2018
+Date of last edit: Dec-7th-2018
 Rui Nian
 
 Current issues: Output size is hard coded
@@ -24,8 +24,11 @@ import argparse
 import os
 
 import warnings
+
 warnings.filterwarnings('ignore')
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
+
+path = '/home/rui/Documents/logistic_regression_tf/'
 
 """
 Parsing section, to define parameters to be ran in the code
@@ -35,13 +38,13 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default='data/time1.csv')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.8)
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.999)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=91)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=20000)
-parser.add_argument("--tensorboard_path", help="Location of saved tensorboard information", default="./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow graph", default='checkpoints/time1.ckpt')
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5000)
+parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
+parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/time1.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
 parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
 
@@ -74,7 +77,7 @@ def min_max_normalization(data):
         if value[0] == 0:
             denominator[index] = 1
 
-    return np.divide((data - col_max), denominator)
+    return np.divide((data - col_min), denominator)
 
 
 # Define Normalization
@@ -119,7 +122,7 @@ print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw
 
 # Delete the index column given by Pandas
 # raw_data = np.delete(raw_data, [0], axis=1)
-np.random.shuffle(raw_data)
+# np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
 # Data partitation into features and labels
@@ -206,8 +209,6 @@ if Args['test']:
         pred = tf.sigmoid(z)
 
         Predictions = sess.run(pred, feed_dict={x: test_X, y: test_y})
-        print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
-
         Predictions_train = sess.run(pred, feed_dict={x: train_X, y: train_y})
         print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
 
@@ -276,7 +277,7 @@ def plots(percent, real_value, start, end):
     plt.ylabel("Percent below Threshold, %")
     plt.step(np.linspace(0, end - start, end - start), percent.reshape(percent.shape[1], 1)[start:end] * 100)
 
-    plt.axhline(y=50, c='r', linestyle='--')
+    plt.axhline(y=70, c='r', linestyle='--')
 
     plt.subplot(2, 1, 2)
     plt.xlabel("Time")
@@ -348,4 +349,46 @@ def k_folds(data, fold_number, train_size=0.8):
     return train_X, test_X, train_y, test_y
 
 
-A = important_features(weights, feature_names, 2)
+def suncor_early_pred(predictions, labels, early_window, num_of_events, threshold=0):
+
+    """
+            predictions:  Predictions made by logistic regression
+            actual_data:  Actual Suncor pipeline data with labels on first column
+           early_window:  How big the window is for early detection
+          num_of_events:  Total events in the data set
+              threshold:  Threshold for rounding a number up
+    """
+    # Convert to boolean
+    predictions = np.round(predictions + 0.5 - threshold)
+
+    early_detected = 0
+    detected = 0
+
+    for i, event in enumerate(labels):
+        # If an event occurs
+        if event == 1 and labels[i - 1] != 1 and 1 not in labels[i:i + 30]:
+            # If predictions detected least 1 time step in advance, the event is considered as "early detected"
+            if 1 in predictions[i - early_window:i]:
+                early_detected += 1
+            # If predictions detected the event up to event, the event is considered as "detected"
+            if 1 in predictions[i - early_window:i + 1]:
+                detected += 1
+
+    recall_overall = detected / num_of_events
+    recall_early = early_detected / num_of_events
+
+    error = 0
+
+    for i, event in enumerate(predictions):
+        # If the prediction is positive
+        if event == 1 and 1 not in predictions[i - 20:i]:
+            # If there is an actual event, nothing happens
+            if 1 in labels[i:i + early_window]:
+                pass
+            # If there is no event, add to error
+            else:
+                error += 1
+
+    precision = detected / (error + detected)
+
+    return recall_early, recall_overall, precision
