@@ -5,12 +5,12 @@ Patch notes:  Added tensorboard, saver
               Different normalization methods
               Currently, min-max is the best
               Added Precision and Recall metrics
+              Fixed MinMaxNormalization, now test data is normalized with respect to train
 
-Date of last edit: Dec-7th-2018
+Date of last edit: Dec-9th-2018
 Rui Nian
 
-Current issues: Output size is hard coded
-                Cannot run code purely to test the accuracy of algorithm
+Current issues: -
 """
 
 import numpy as np
@@ -22,13 +22,15 @@ import gc
 import argparse
 
 import os
+import pickle
 
 import warnings
 
 warnings.filterwarnings('ignore')
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 
-path = '/home/rui/Documents/logistic_regression_tf/'
+# path = '/home/rui/Documents/logistic_regression_tf/'
+path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
 
 """
 Parsing section, to define parameters to be ran in the code
@@ -39,16 +41,18 @@ parser = argparse.ArgumentParser(description="Inputs to the logistic regression"
 
 # Arguments
 parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.999)
+parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.99)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=91)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
 parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5000)
+parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.7)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/time1.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
 
 # Test Model
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
 parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
 
 # Makes a dictionary of parsed args
@@ -65,19 +69,26 @@ tf.set_random_seed(seed)
 
 
 # Min max normalization
-def min_max_normalization(data):
+class MinMaxNormalization:
 
-    col_max = np.max(data, axis=1).reshape(data.shape[0], 1)
-    col_min = np.min(data, axis=1).reshape(data.shape[0], 1)
+    def __init__(self, data):
+        self.col_min = np.min(data, axis=1).reshape(data.shape[0], 1)
+        self.col_max = np.max(data, axis=1).reshape(data.shape[0], 1)
+        self.denominator = abs(self.col_max - self.col_min)
 
-    denominator = abs(col_max - col_min)
+        # Fix divide by zero, replace value with 1 because these usually happen for boolean columns
+        for index, value in enumerate(self.denominator):
+            if value[0] == 0:
+                self.denominator[index] = 1
 
-    # Fix divide by zero, replace value with 1 because these usually happen for boolean columns
-    for index, value in enumerate(denominator):
-        if value[0] == 0:
-            denominator[index] = 1
+    def __call__(self, data):
+        return np.divide((data - self.col_min), self.denominator)
 
-    return np.divide((data - col_min), denominator)
+
+def save_info(obj, path):
+    pickle_out = open(path, "wb")
+    pickle.dump(obj, pickle_out)
+    pickle_out.close()
 
 
 # Define Normalization
@@ -112,8 +123,7 @@ raw_data = pd.read_csv(Args['data'])
 # Get feature headers
 feature_names = list(raw_data)
 
-# Delete Unnamed: 0 and label column
-# del feature_names[0]
+# Delete label column
 del feature_names[0]
 
 # Turn Pandas dataframe into NumPy Array
@@ -147,6 +157,9 @@ mini_batch_size = Args['minibatch_size']
 total_batch_number = int(train_X.shape[1] / mini_batch_size)
 epochs = Args['epochs']
 
+# min_max_normalization = MinMaxNormalization(train_X)
+pickle_in = open(Args['normalization'], 'rb')
+min_max_normalization = pickle.load(pickle_in)
 train_X = min_max_normalization(train_X)
 test_X = min_max_normalization(test_X)
 
@@ -179,7 +192,7 @@ loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=z, labels=y
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
 
 # Prediction
-pred = tf.round(tf.sigmoid(z))
+pred = tf.round(tf.sigmoid(z) - Args['threshold'] + 0.5)
 
 # Evaluate accuracy.  Has to be cast to tf.float32 so they are numbers rather than True/False.
 # Then reduce mean to divide correct by m examples
@@ -277,7 +290,7 @@ def plots(percent, real_value, start, end):
     plt.ylabel("Percent below Threshold, %")
     plt.step(np.linspace(0, end - start, end - start), percent.reshape(percent.shape[1], 1)[start:end] * 100)
 
-    plt.axhline(y=70, c='r', linestyle='--')
+    plt.axhline(y=Args['threshold'] * 100, c='r', linestyle='--')
 
     plt.subplot(2, 1, 2)
     plt.xlabel("Time")
@@ -349,7 +362,7 @@ def k_folds(data, fold_number, train_size=0.8):
     return train_X, test_X, train_y, test_y
 
 
-def suncor_early_pred(predictions, labels, early_window, num_of_events, threshold=0):
+def suncor_early_pred(predictions, labels, early_window, num_of_events, threshold=0.5):
 
     """
             predictions:  Predictions made by logistic regression
@@ -357,27 +370,33 @@ def suncor_early_pred(predictions, labels, early_window, num_of_events, threshol
            early_window:  How big the window is for early detection
           num_of_events:  Total events in the data set
               threshold:  Threshold for rounding a number up
+
+        To use: suncor_early_pred(Predictions[0], test_y[0], 25, 54, 0.7)
     """
     # Convert to boolean
     predictions = np.round(predictions + 0.5 - threshold)
 
     early_detected = 0
     detected = 0
+    not_detected = []
 
     for i, event in enumerate(labels):
         # If an event occurs
-        if event == 1 and labels[i - 1] != 1 and 1 not in labels[i:i + 30]:
+        if event == 1 and labels[i - 1] != 1:
             # If predictions detected least 1 time step in advance, the event is considered as "early detected"
             if 1 in predictions[i - early_window:i]:
                 early_detected += 1
             # If predictions detected the event up to event, the event is considered as "detected"
-            if 1 in predictions[i - early_window:i + 1]:
+            elif 1 in predictions[i - early_window:i + 1]:
                 detected += 1
+            else:
+                not_detected.append(i)
 
     recall_overall = detected / num_of_events
     recall_early = early_detected / num_of_events
 
     error = 0
+    misfire = []
 
     for i, event in enumerate(predictions):
         # If the prediction is positive
@@ -388,6 +407,7 @@ def suncor_early_pred(predictions, labels, early_window, num_of_events, threshol
             # If there is no event, add to error
             else:
                 error += 1
+                misfire.append(i)
 
     precision = detected / (error + detected)
 
