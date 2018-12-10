@@ -40,15 +40,15 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/2_time_data.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.99)
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.8)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=64)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=5000)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=76)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=1500)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.7)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/time1.ckpt')
+parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/2time.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
 
 # Test Model
@@ -132,7 +132,7 @@ print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw
 
 # Delete the index column given by Pandas
 # raw_data = np.delete(raw_data, [0], axis=1)
-# np.random.shuffle(raw_data)
+np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
 # Data partitation into features and labels
@@ -157,9 +157,9 @@ mini_batch_size = Args['minibatch_size']
 total_batch_number = int(train_X.shape[1] / mini_batch_size)
 epochs = Args['epochs']
 
-# min_max_normalization = MinMaxNormalization(train_X)
-pickle_in = open(Args['normalization'], 'rb')
-min_max_normalization = pickle.load(pickle_in)
+min_max_normalization = MinMaxNormalization(train_X)
+# pickle_in = open(Args['normalization'], 'rb')
+# min_max_normalization = pickle.load(pickle_in)
 train_X = min_max_normalization(train_X)
 test_X = min_max_normalization(test_X)
 
@@ -371,7 +371,8 @@ def suncor_early_pred(predictions, labels, early_window, num_of_events, threshol
           num_of_events:  Total events in the data set
               threshold:  Threshold for rounding a number up
 
-        To use: suncor_early_pred(Predictions[0], test_y[0], 25, 54, 0.7)
+        To use: recall_early, recall_overall, precision, not_detected, misfired =
+                suncor_early_pred(Predictions_train[0], train_y[0], 25, 54, 0.7)
     """
     # Convert to boolean
     predictions = np.round(predictions + 0.5 - threshold)
@@ -387,7 +388,7 @@ def suncor_early_pred(predictions, labels, early_window, num_of_events, threshol
             if 1 in predictions[i - early_window:i]:
                 early_detected += 1
             # If predictions detected the event up to event, the event is considered as "detected"
-            elif 1 in predictions[i - early_window:i + 1]:
+            if 1 in predictions[i - early_window:i + 1]:
                 detected += 1
             else:
                 not_detected.append(i)
@@ -396,7 +397,7 @@ def suncor_early_pred(predictions, labels, early_window, num_of_events, threshol
     recall_early = early_detected / num_of_events
 
     error = 0
-    misfire = []
+    misfired = []
 
     for i, event in enumerate(predictions):
         # If the prediction is positive
@@ -407,8 +408,8 @@ def suncor_early_pred(predictions, labels, early_window, num_of_events, threshol
             # If there is no event, add to error
             else:
                 error += 1
-                misfire.append(i)
+                misfired.append(i)
 
     precision = detected / (error + detected)
 
-    return recall_early, recall_overall, precision
+    return recall_early, recall_overall, precision, not_detected, misfired
