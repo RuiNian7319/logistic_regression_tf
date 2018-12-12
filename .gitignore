@@ -2,7 +2,7 @@
 64_data.csv
 
 # MacOS
-*.DS_Stores
+*.DS_Store
 
 # Company data and tensorboard logs
 /data
