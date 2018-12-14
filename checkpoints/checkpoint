@@ -1,2 +1,2 @@
-model_checkpoint_path: "/home/rui/Documents/logistic_regression_tf/checkpoints/10time.ckpt"
-all_model_checkpoint_paths: "/home/rui/Documents/logistic_regression_tf/checkpoints/10time.ckpt"
+model_checkpoint_path: "/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt"
+all_model_checkpoint_paths: "/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt"

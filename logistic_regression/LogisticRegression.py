@@ -1,18 +1,20 @@
 """
-Logistic Regression Object Patch 1.0
+Logistic Regression Object Patch 1.1
 
-Patch notes:  -
+Patch notes:  Great enhancements from existing file
 
-Date of last edit: November-27-2018
+Date of last edit: Dec-13-2018
 Rui Nian
 
-Current issues:  Output is always one, train test split not completed within class
+Current issues:  Output is always one
+                 Train size currently hard defined
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
+import pickle
 
 import gc
 import argparse
@@ -55,14 +57,10 @@ class LogisticRegression:
 
                        W: Weights of the logistic regression
                        b: Biases of the logistic regression
-
-
-
-
-
     """
 
-    def __init__(self, sess, data, lr=0.003, minibatch_size=64, train_size=0.9, epochs=5):
+    def __init__(self, sess, train_X, train_y, test_X, test_y, lr=0.003, minibatch_size=64, train_size=0.9, epochs=5,
+                 lambd=0.001):
 
         """
         Input data must be of shape: [Nx, m] and the labels must be in the first column
@@ -71,27 +69,23 @@ class LogisticRegression:
         self.sess = sess
 
         # Data
-        self.features = data[1:, :]
-        self.labels = data[0, :]
-        self.nx = self.features.shape[0]
+        self.train_X = train_X
+        self.train_y = train_y
+
+        self.test_X = test_X
+        self.test_y = test_y
+
+        self.nx = train_X.shape[0]
         self.ny = 1
-        self.m = self.features.shape[1]
+        self.m = train_X.shape[1]
         self.train_size = train_size
-
-        train_index = int(self.train_size * self.m)
-        self.train_X = self.features[:, 0:train_index].reshape(self.nx, train_index)
-        self.train_X = self.min_max_normalization(self.train_X)
-        self.train_y = self.labels[0:train_index].reshape(self.ny, train_index)
-
-        self.test_X = self.features[:, train_index:].reshape(self.nx, self.m - train_index)
-        self.test_X = self.min_max_normalization(self.test_X)
-        self.test_y = self.labels[train_index:].reshape(self.ny, self.m - train_index)
 
         # Machine learning parameters
         self.lr = lr
         self.minibatch_size = minibatch_size
         self.total_batch_number = int((self.m / self.minibatch_size) * self.train_size)
         self.epochs = epochs
+        self.lambd = lambd
 
         # Tensorflow variables
         self.X = tf.placeholder(dtype=tf.float32, shape=[self.nx, None])
@@ -104,7 +98,9 @@ class LogisticRegression:
         self.z = tf.matmul(self.W, self.X) + self.b
 
         # Loss function
-        self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.z, labels=self.y))
+        self.regularizer = tf.nn.l2_loss(self.W)
+        self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.z, labels=self.y)
+                                   + self.lambd * self.regularizer)
 
         # Adam optimization
         self.optimizer = tf.train.AdamOptimizer(learning_rate=lr).minimize(self.loss)
@@ -122,6 +118,8 @@ class LogisticRegression:
         self.init = tf.global_variables_initializer()
         self.init_l = tf.local_variables_initializer()
 
+        self.saver = tf.train.Saver()
+
     def train(self, features, labels):
         self.sess.run(self.optimizer, feed_dict={self.X: features, self.y: labels})
         curr_loss = self.sess.run(self.loss, feed_dict={self.X: features, self.y: labels})
@@ -136,57 +134,11 @@ class LogisticRegression:
         return self.sess.run(pred, feed_dict={self.X: features, self.y: labels})
 
     def model_evaluation(self, features, labels):
-        return self.sess.run([self.accuracy, self.prec_ops, self.recall_ops], feed_dict={self.X: features, self.y: labels})
+        return self.sess.run([self.accuracy, self.prec_ops, self.recall_ops], feed_dict={self.X: features,
+                                                                                         self.y: labels})
 
     def weights_and_biases(self):
-        return sess.run([self.W, self.b])
-
-    @staticmethod
-    def random_seed(seed=8):
-        np.random.seed(seed)
-        tf.set_random_seed(seed)
-
-    # Min max normalization
-    @staticmethod
-    def min_max_normalization(data):
-
-        col_max = np.max(data, axis=1).reshape(data.shape[0], 1)
-        col_min = np.min(data, axis=1).reshape(data.shape[0], 1)
-
-        denominator = abs(col_max - col_min)
-
-        # Fix divide by zero, replace value with 1 because these usually happen for boolean columns
-        for index, value in enumerate(denominator):
-            if value[0] == 0:
-                denominator[index] = 1
-
-        return np.divide((data - col_min), denominator)
-
-    # Define Normalization
-    @staticmethod
-    def normalization(data):
-        col_mean = np.mean(data, axis=1).reshape(data.shape[0], 1)
-        col_std = np.std(data, axis=1).reshape(data.shape[0], 1)
-
-        # Fix divide by 0 since sometimes, standard deviation can be zero
-        for index, value in enumerate(col_std):
-            if value[0] == 0:
-                col_std[index] = 1
-
-        return np.divide((data - col_mean), col_std)
-
-    # Modified Normalization robust to outliers
-    @staticmethod
-    def mod_normalization(data):
-        col_median = np.median(data, axis=1).reshape(data.shape[0], 1)
-        mad = np.median(abs(data - col_median), axis=1).reshape(data.shape[0], 1)
-
-        # Fix divide by 0 for when MAD = 0
-        for index, value in enumerate(mad):
-            if value[0] == 0:
-                mad[index] = 1
-
-        return np.divide(0.6745 * (data - col_median), mad)
+        return self.sess.run([self.W, self.b])
 
     def __str__(self):
         return "Logistic Regression using {} features.".format(self.nx)
@@ -195,51 +147,177 @@ class LogisticRegression:
         return "LogisticRegression()"
 
 
-if __name__ == "__main__":
+# Min max normalization
+class MinMaxNormalization:
+
+    def __init__(self, data):
+        self.col_min = np.min(data, axis=1).reshape(data.shape[0], 1)
+        self.col_max = np.max(data, axis=1).reshape(data.shape[0], 1)
+        self.denominator = abs(self.col_max - self.col_min)
+
+        # Fix divide by zero, replace value with 1 because these usually happen for boolean columns
+        for index, value in enumerate(self.denominator):
+            if value[0] == 0:
+                self.denominator[index] = 1
+
+    def __call__(self, data):
+        return np.divide((data - self.col_min), self.denominator)
+
+
+def save(item, path):
+    pickle_out = open(path, 'wb')
+    pickle.dump(item, pickle_out)
+    pickle_out.close()
+
+
+def load(path):
+    pickle_in = open(path, 'rb')
+    item = pickle.load(pickle_in)
+    return item
+
+
+def random_seed(seed=8):
+    np.random.seed(seed)
+    tf.set_random_seed(seed)
+
+
+def important_features(weights, feature_list, threshold):
+    """
+    Returns all the important features above the threshold
+
+    important_features(weights, feature_names, 2)
+    """
+
+    index = np.linspace(0, weights.shape[0] - 1, weights.shape[0])
+    index = [int(i) for (i, j) in zip(index, weights) if abs(j) > threshold]
+    feature_list = [feature_list[i] for i in index]
+    weights_list = [weights[i][0] for i in index]
+
+    return pd.DataFrame([feature_list, weights_list], index=["Features", "Weights"]).T
+
+
+def simulation(data_path, model_path, norm_path, train_size, testing):
 
     # Loading data
-    raw_data = pd.read_csv('data/64_data.csv')
+    raw_data = pd.read_csv(data_path)
 
     # Get feature headers
     feature_names = list(raw_data)
 
     # Delete Unnamed: 0 and label column
     del feature_names[0]
-    del feature_names[0]
 
     # Turn Pandas dataframe into NumPy Array
     raw_data = raw_data.values
     print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw_data.shape[0]))
 
-    # Delete the index column given by Pandas
-    raw_data = np.delete(raw_data, [0], axis=1)
-    np.random.shuffle(raw_data)
+    # Shuffle and transpose the data
+    if testing:
+        pass
+    else:
+        pass # np.random.shuffle(raw_data)
     raw_data = raw_data.T
+
+    # Data partition into features and labels
+    labels = raw_data[0, :]
+    features = raw_data[1:, :]
+
+    # Train / test split
+    train_index = int(features.shape[1] * train_size)
+
+    train_X = features[:, 0:train_index].reshape(features.shape[0], train_index)
+    train_y = labels[0:train_index].reshape(1, train_index)
+
+    assert(train_y.shape[1] == train_X.shape[1])
+
+    test_X = features[:, train_index:]
+    test_y = labels[train_index:].reshape(1, features.shape[1] - train_index)
+
+    assert(test_y.shape[1] == test_X.shape[1])
+
+    # Restore the parameters from normalizer
+    if testing:
+        min_max_normalization = load(norm_path)
+    else:
+        min_max_normalization = MinMaxNormalization(train_X)
+
+    train_X = min_max_normalization(train_X)
+    test_X = min_max_normalization(test_X)
+
+    # Restore the parameters from normalizer
+    if testing:
+        min_max_normalization = load(norm_path)
+
+    assert(np.isnan(train_X).any() == False)
+    assert(np.isnan(test_X).any() == False)
 
     with tf.Session() as sess:
 
-        log_reg = LogisticRegression(sess, raw_data, train_size=0.9)
-        log_reg.random_seed()
+        # Initialize logistic regression object
+        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=32, epochs=3)
 
-        sess.run(log_reg.init)
-        sess.run(log_reg.init_l)
+        # If testing the model, restore the tensorflow graph
+        if testing:
+            log_reg.saver.restore(sess, model_path)
+            sess.run(log_reg.init_l)
 
-        for epoch in range(log_reg.epochs):
+            train_accuracy, train_precision, train_recall = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
+            print("Train acc: {:3f} | Train precision: {:3f} | Train recall: {:3f}".format(train_accuracy,
+                                                                                           train_precision,
+                                                                                           train_recall))
 
-            for i in range(log_reg.total_batch_number):
-                batch_index = i * log_reg.minibatch_size
-                batch_X = log_reg.train_X[:, batch_index:(batch_index + log_reg.minibatch_size)]
-                batch_y = log_reg.train_y[:, batch_index:(batch_index + log_reg.minibatch_size)]
+            test_accuracy, test_precision, test_recall = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
+            print("Test acc: {:5f} | Test precision: {:5f} | Test recall: {:5f}".format(test_accuracy,
+                                                                                        test_precision,
+                                                                                        test_recall))
 
-                current_loss = log_reg.train(batch_X, batch_y)
-                train_accuracy, _, _ = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
-                test_accuracy, _, _ = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
+        else:
+            sess.run(log_reg.init)
+            sess.run(log_reg.init_l)
 
-                if i % 10 == 0:
-                    print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f}".format(epoch + 1,
-                                                                                                current_loss,
-                                                                                                train_accuracy,
-                                                                                                test_accuracy))
+            for epoch in range(log_reg.epochs):
+
+                for i in range(log_reg.total_batch_number):
+                    batch_index = i * log_reg.minibatch_size
+                    batch_X = log_reg.train_X[:, batch_index:(batch_index + log_reg.minibatch_size)]
+                    batch_y = log_reg.train_y[:, batch_index:(batch_index + log_reg.minibatch_size)]
+
+                    current_loss = log_reg.train(batch_X, batch_y)
+                    train_accuracy, _, _ = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
+                    test_accuracy, _, _ = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
+
+                    if i % 10 == 0:
+                        print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f}".format(epoch + 1,
+                                                                                                    current_loss,
+                                                                                                    train_accuracy,
+                                                                                                    test_accuracy))
+
+            train_accuracy, _, _ = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
+            test_accuracy, _, _ = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
+
+            print("Final results: train acc: {:5f} | test acc: {:5f}".format(train_accuracy, test_accuracy))
 
         Pred = log_reg.test(log_reg.test_X, log_reg.test_y)
-        Acc, Precision, Recall = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
+        Weights, Biases = log_reg.weights_and_biases()
+
+        if testing:
+            pass
+        else:
+            save(min_max_normalization, norm_path)
+            log_reg.saver.save(sess, model_path)
+
+        return Pred, Weights, Biases
+
+
+if __name__ == "__main__":
+
+    random_seed(8)
+
+    # Users define these data
+    path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of repository
+    model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
+    norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
+    train_size = 0.9    # Train / test split size
+    testing = True    # Are you training or testing
+
+    pred, weights, biases = simulation(path, model_path, norm_path, train_size, testing)

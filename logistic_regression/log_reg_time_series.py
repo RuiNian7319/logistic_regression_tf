@@ -26,11 +26,13 @@ import pickle
 
 import warnings
 
+from suncor_ts_tester import suncor_early_pred
+
 warnings.filterwarnings('ignore')
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 
-path = '/home/rui/Documents/logistic_regression_tf/'
-# path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
+# path = '/home/rui/Documents/logistic_regression_tf/'
+path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
 
 """
 Parsing section, to define parameters to be ran in the code
@@ -40,20 +42,20 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/64_data_sampled.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9999)
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=32)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=120)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=10)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
-parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
+parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/test1.ckpt')
+parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=True)
 
 # Test Model
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
-parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -63,7 +65,7 @@ Logistic Regression
 """
 
 # Seed for reproducability
-seed = 18
+seed = 8
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
@@ -131,7 +133,7 @@ raw_data = raw_data.values
 print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw_data.shape[0]))
 
 # Delete the index column given by Pandas
-# np.random.shuffle(raw_data)
+np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
 # Data partitation into features and labels
@@ -152,11 +154,11 @@ test_y = labels[train_values:].reshape(1, test_X.shape[1])
 For feeding t and t - 1
 """
 
-train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
-train_y = train_y[:, :-1]
-
-test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
-test_y = test_y[:, :-1]
+# train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
+# train_y = train_y[:, :-1]
+#
+# test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
+# test_y = test_y[:, :-1]
 
 # Neural network parameters
 input_size = train_X.shape[0]
@@ -166,9 +168,9 @@ mini_batch_size = Args['minibatch_size']
 total_batch_number = int(train_X.shape[1] / mini_batch_size)
 epochs = Args['epochs']
 
-# min_max_normalization = MinMaxNormalization(train_X)
-pickle_in = open(Args['normalization'], 'rb')
-min_max_normalization = pickle.load(pickle_in)
+min_max_normalization = MinMaxNormalization(train_X)
+# pickle_in = open(Args['normalization'], 'rb')
+# min_max_normalization = pickle.load(pickle_in)
 train_X = min_max_normalization(train_X)
 test_X = min_max_normalization(test_X)
 
@@ -372,58 +374,3 @@ def k_folds(data, fold_number, train_size=0.8):
     test_y = test_data[:, 0]
 
     return train_X, test_X, train_y, test_y
-
-
-def suncor_early_pred(predictions, labels, early_window, num_of_events, threshold=0.5):
-
-    """     DOES NOT WORK IF 1ST EXAMPLE IS AN EVENT !!
-            predictions:  Predictions made by logistic regression
-            actual_data:  Actual Suncor pipeline data with labels on first column
-           early_window:  How big the window is for early detection
-          num_of_events:  Total events in the data set
-              threshold:  Threshold for rounding a number up
-
-        To use: recall_early, recall_overall, precision, not_detected, misfired, detection_list = \
-                suncor_early_pred(Predictions_train[0], train_y[0], 25, 47, 0.7)
-    """
-    # Convert to boolean
-    predictions = np.round(predictions + 0.5 - threshold)
-
-    early_detected = 0
-    detected = 0
-    did_detect = []
-    not_detected = []
-
-    for i, event in enumerate(labels):
-        # If an event occurs
-        if event == 1 and (labels[i - 1] != 1 or i == 0):
-            # If predictions detected least 1 time step in advance, the event is considered as "early detected"
-            if 1 in predictions[i - early_window:i]:
-                early_detected += 1
-            # If predictions detected the event up to event, the event is considered as "detected"
-            if 1 in predictions[i - early_window:i + 1]:
-                detected += 1
-                did_detect.append(i)
-            else:
-                not_detected.append(i)
-
-    recall_overall = detected / num_of_events
-    recall_early = early_detected / num_of_events
-
-    error = 0
-    misfired = []
-
-    for i, event in enumerate(predictions):
-        # If the prediction is positive
-        if event == 1 and 1 not in predictions[i - 20:i]:
-            # If there is an actual event, nothing happens
-            if 1 in labels[i:i + early_window]:
-                pass
-            # If there is no event, add to error
-            else:
-                error += 1
-                misfired.append(i)
-
-    precision = detected / (error + detected)
-
-    return recall_early, recall_overall, precision, not_detected, misfired, did_detect
