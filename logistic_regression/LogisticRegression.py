@@ -6,8 +6,9 @@ Patch notes:  Great enhancements from existing file
 Date of last edit: Dec-13-2018
 Rui Nian
 
-Current issues:  Output is always one
-                 Train size currently hard defined
+Current issues:  Output shape is always one
+                 Maybe retranspose the data
+                 Add threshold to rounding?
 """
 
 import numpy as np
@@ -33,30 +34,37 @@ class LogisticRegression:
 
     Attributes
         ------
-                    sess: Tensorflow session
+                    sess:  Tensorflow session
 
-                features: Features of the data set, X matrix.  Shape of [Nx, m]
-                  labels: Labels corresponding to the features, y matrix. Shape of [1, m]
-                      nx: Number of features
-                      ny: Number of outputs
-                       m: Number of training examples
-              train_size: % of data used for training
+                 train_X:  Training features, shape: [Nx, m_train]
+                 train_y:  Training labels, shape: [1, m_train]
+                  test_X:  Testing features, shape: [Nx, m_test]
+                  test_y:  Testing labels, shape: [1, m_test]
 
-                 train_X:
-                 train_y:
-                  test_X:
-                  test_y:
+                      nx:  Number of features
+                      ny:  Number of outputs
+                       m:  Number of training examples
+              train_size:  % of data used for training
 
-                      lr: Learning rate of logistic regression.  Default value = 0.003
-          minibatch_size: Size of mini-batch for mini-batch gradient descent
-      total_Batch_number:
-                   epoch:
+                      lr:  Learning rate of logistic regression.  Default value = 0.003
+          minibatch_size:  Size of mini-batch for mini-batch gradient descent
+      total_batch_number:  Total possible amount of batches for the current data set
+                  epochs:  Number of times to iterate through the data
+                   lambd:  Regularization parameter
 
                        X: Placeholder for feeding minibatches of features
                        y: Placeholder for feeding minibatches of labels
 
                        W: Weights of the logistic regression
                        b: Biases of the logistic regression
+
+    Methods
+        -------
+                   train:  Train the model using the current structure of the computational graph
+                    test:  Output is the predicted outputs, rounded up at a threshold of 50%
+            test_percent:  Output the %, rather than a 0 or 1
+        model_evaluation:  Outputs the accuracy, precision, and recall
+      weights_and_biases:  Outputs the weights and biases of the current model
     """
 
     def __init__(self, sess, train_X, train_y, test_X, test_y, lr=0.003, minibatch_size=64, train_size=0.9, epochs=5,
