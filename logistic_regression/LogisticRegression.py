@@ -174,6 +174,49 @@ class MinMaxNormalization:
         return np.divide((data - self.col_min), self.denominator)
 
 
+class DeviationVariables:
+
+    """
+    data: Comes in with shape [Nx, m]
+    """
+
+    def __init__(self, data):
+        self.median = np.median(data, axis=1)
+        self.mad = []
+
+        # Populate the MAD values
+        for i in range(data.shape[0]):
+            med_abs_dev = np.median([np.abs(y - self.median[i]) for y in data[i, :]])
+            self.mad.append(med_abs_dev)
+
+        # Make sure the MAD values are not 0
+        for i, value in enumerate(self.mad):
+            if self.mad[i] == 0:
+                self.mad[i] = 0.1
+
+    def __call__(self, data, features, threshold):
+        # Input data should be [Nx, 1]
+        data = abs(data - self.median)
+
+        abnormal_features = []
+        for index, value in enumerate(data):
+            if abs(value) > self.mad[index] * threshold:
+                abnormal_features.append(index)
+
+        features = np.array(features)
+
+        return features[abnormal_features]
+
+    def plot(self, data, index, threshold):
+        # Input data should be [Nx, m]
+        plt.plot(data[index, :])
+        plt.axhline(self.median[index], color='green')
+        plt.axhline(self.median[index] - self.mad[index] * threshold, color='red')
+        plt.axhline(self.median[index] + self.mad[index] * threshold, color='red')
+
+        plt.show()
+
+
 def save(item, path):
     pickle_out = open(path, 'wb')
     pickle.dump(item, pickle_out)
@@ -206,10 +249,13 @@ def important_features(weights, feature_list, threshold):
     return pd.DataFrame([feature_list, weights_list], index=["Features", "Weights"]).T
 
 
-def simulation(data_path, model_path, norm_path, train_size, testing):
+def simulation(data_path, model_path, norm_path, label_name, train_size, testing):
 
     # Loading data
     raw_data = pd.read_csv(data_path)
+
+    cols = [col for col in raw_data.columns if (col[-6:] == "_label" and col != label_name)]
+    raw_data.drop(columns=cols, axis=1, inplace=True)
 
     # Get feature headers
     feature_names = list(raw_data)
@@ -225,7 +271,7 @@ def simulation(data_path, model_path, norm_path, train_size, testing):
     if testing:
         pass
     else:
-        pass # np.random.shuffle(raw_data)
+        pass  # np.random.shuffle(raw_data)
     raw_data = raw_data.T
 
     # Data partition into features and labels
@@ -264,7 +310,7 @@ def simulation(data_path, model_path, norm_path, train_size, testing):
     with tf.Session() as sess:
 
         # Initialize logistic regression object
-        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=32, epochs=3)
+        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=50)
 
         # If testing the model, restore the tensorflow graph
         if testing:
@@ -323,11 +369,18 @@ if __name__ == "__main__":
 
     random_seed(8)
 
-    # Users define these data
-    path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of repository
-    model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
-    norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
-    train_size = 0.9    # Train / test split size
-    testing = True    # Are you training or testing
+    # Paths for MacOS Mojave
+    # path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of data
+    # model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
+    # norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
 
-    pred, weights, biases = simulation(path, model_path, norm_path, train_size, testing)
+    # Paths for Ubuntu 18.04
+    path = '/home/rui/Documents/logistic_regression_tf/data/0_time_data.csv'    # Location of data
+    model_path = '/home/rui/Documents/logistic_regression_tf/checkpoints/test.ckpt'
+    norm_path = '/home/rui/Documents/logistic_regression_tf/pickles/norm.pickle'
+
+    label_name = '175642864_label'
+    train_size = 0.9    # Train / test split size
+    testing = False    # Are you training or testing
+
+    pred, weights, biases = simulation(path, model_path, norm_path, label_name, train_size, testing)

@@ -98,21 +98,16 @@ class DeviationVariables:
     data: Comes in with shape [Nx, m]
     """
 
-    def __init__(self, data):
+    def __init__(self, data, features):
         self.median = np.median(data, axis=1)
         self.mad = []
-
-        # Populate the MAD values
         for i in range(data.shape[0]):
             med_abs_dev = np.median([np.abs(y - self.median[i]) for y in data[i, :]])
             self.mad.append(med_abs_dev)
 
-        # Make sure the MAD values are not 0
-        for i, value in enumerate(self.mad):
-            if self.mad[i] == 0:
-                self.mad[i] = 0.1
+        self.features = np.array(features)
 
-    def __call__(self, data, features, threshold):
+    def __call__(self, data, threshold):
         # Input data should be [Nx, 1]
         data = abs(data - self.median)
 
@@ -121,9 +116,7 @@ class DeviationVariables:
             if abs(value) > self.mad[index] * threshold:
                 abnormal_features.append(index)
 
-        features = np.array(features)
-
-        return features[abnormal_features]
+        return self.features[abnormal_features]
 
     def plot(self, data, index, threshold):
         # Input data should be [Nx, m]
@@ -226,8 +219,6 @@ test_X = min_max_normalization(test_X)
 # Test cases
 assert(np.isnan(train_X).any() == False)
 assert(np.isnan(test_X).any() == False)
-
-# deviation_vars = DeviationVariables(train_X)
 
 # Model placeholders
 with tf.name_scope("Inputs"):
