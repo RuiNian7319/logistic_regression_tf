@@ -9,6 +9,8 @@ Rui Nian
 Current issues:  Output shape is always one
                  Maybe retranspose the data
                  Add threshold to rounding?
+                 Add more documentation in attributes
+                 Add more user inputs
 """
 
 import numpy as np
