@@ -3,14 +3,15 @@ Logistic Regression Object Patch 1.1
 
 Patch notes:  Great enhancements from existing file
 
-Date of last edit: Dec-13-2018
+Date of last edit: Dec-20-2018
 Rui Nian
 
 Current issues:  Output shape is always one
                  Maybe retranspose the data
                  Add threshold to rounding?
-                 Add more documentation in attributes
                  Add more user inputs
+
+   Patch notes:  Added plotting feature
 """
 
 import numpy as np
@@ -21,6 +22,8 @@ import pickle
 
 import gc
 import argparse
+
+from Accuracy_Plots import plots
 
 import os
 
@@ -271,7 +274,7 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
     if testing:
         pass
     else:
-        pass  # np.random.shuffle(raw_data)
+        np.random.shuffle(raw_data)
     raw_data = raw_data.T
 
     # Data partition into features and labels
@@ -310,7 +313,7 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
     with tf.Session() as sess:
 
         # Initialize logistic regression object
-        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=50)
+        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=150)
 
         # If testing the model, restore the tensorflow graph
         if testing:
@@ -353,8 +356,9 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
 
             print("Final results: train acc: {:5f} | test acc: {:5f}".format(train_accuracy, test_accuracy))
 
-        Pred = log_reg.test(log_reg.test_X, log_reg.test_y)
-        Weights, Biases = log_reg.weights_and_biases()
+        pred_test = log_reg.test(log_reg.test_X, log_reg.test_y)
+        pred_train = log_reg.test(log_reg.train_X, log_reg.train_y)
+        weights, biases = log_reg.weights_and_biases()
 
         if testing:
             pass
@@ -362,7 +366,7 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
             save(min_max_normalization, norm_path)
             log_reg.saver.save(sess, model_path)
 
-        return Pred, Weights, Biases
+        return pred_train, train_y, pred_test, test_y, weights, biases
 
 
 if __name__ == "__main__":
@@ -383,4 +387,8 @@ if __name__ == "__main__":
     train_size = 0.9    # Train / test split size
     testing = False    # Are you training or testing
 
-    pred, weights, biases = simulation(path, model_path, norm_path, label_name, train_size, testing)
+    Pred_train, Train_y, Pred_test, Test_y, Weights, Biases = simulation(path, model_path, norm_path, label_name,
+                                                                         train_size, testing)
+
+    # Plots train data from 0 to 400
+    plots(Pred_train, Train_y, 0, 400)

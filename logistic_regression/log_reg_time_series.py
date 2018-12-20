@@ -43,20 +43,20 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/syn_10_data_plc.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.999)
+parser.add_argument("--train_size", help="% of whole data set used for training", default=0.95)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=16)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=250)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=512)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=50)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
-parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
+parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10timev3.ckpt')
+parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=True)
 
 # Test Model
-parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=True)
-parser.add_argument("--test", help="put as true if you want to test the current model", default=True)
+parser.add_argument("--restore_graph", help="Reload model parameters from saved location", default=False)
+parser.add_argument("--test", help="put as true if you want to test the current model", default=False)
 
 # Makes a dictionary of parsed args
 Args = vars(parser.parse_args())
@@ -182,7 +182,7 @@ raw_data = raw_data.values
 print("Raw data has {} features with {} examples.".format(raw_data.shape[1], raw_data.shape[0]))
 
 # Delete the index column given by Pandas
-# np.random.shuffle(raw_data)
+np.random.shuffle(raw_data)
 raw_data = raw_data.T
 
 # Data partitation into features and labels
@@ -203,11 +203,11 @@ test_y = labels[train_values:].reshape(1, test_X.shape[1])
 For feeding t and t - 1
 """
 
-train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
-train_y = train_y[:, :-1]
-
-test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
-test_y = test_y[:, :-1]
+# train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
+# train_y = train_y[:, :-1]
+#
+# test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
+# test_y = test_y[:, :-1]
 
 # Neural network parameters
 input_size = train_X.shape[0]
@@ -217,9 +217,9 @@ mini_batch_size = Args['minibatch_size']
 total_batch_number = int(train_X.shape[1] / mini_batch_size)
 epochs = Args['epochs']
 
-# min_max_normalization = MinMaxNormalization(train_X)
-pickle_in = open(Args['normalization'], 'rb')
-min_max_normalization = pickle.load(pickle_in)
+min_max_normalization = MinMaxNormalization(train_X)
+# pickle_in = open(Args['normalization'], 'rb')
+# min_max_normalization = pickle.load(pickle_in)
 train_X = min_max_normalization(train_X)
 test_X = min_max_normalization(test_X)
 
@@ -343,15 +343,22 @@ else:
         biases = sess.run(b)
 
 
-def plots(percent, real_value, start, end):
+def plots(prediction, real_value, start, end):
 
     """
-    Plots the real vs percentage
+    Plots the real plant trajectory vs the predicted
+
+    Inputs
+         -----
+         perdiction:  Prediction from machine learning model
+         real_value:  Real value from the data set
+              start:  Start index of the plot
+                end:  End index of the plot
     """
     plt.subplot(2, 1, 1)
     plt.xlabel("Time")
     plt.ylabel("Percent below Threshold, %")
-    plt.step(np.linspace(0, end - start, end - start), percent.reshape(percent.shape[1], 1)[start:end] * 100)
+    plt.step(np.linspace(0, end - start, end - start), prediction.reshape(prediction.shape[1], 1)[start:end] * 100)
 
     plt.axhline(y=Args['threshold'] * 100, c='r', linestyle='--')
 
