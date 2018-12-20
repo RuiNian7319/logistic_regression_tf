@@ -1,4 +1,4 @@
-# Models using Logistic Regression
+# Models using Logistic Regression - Added some new stuff
 
 ### Time-series logistic regression:
 
