@@ -25,6 +25,8 @@ import argparse
 
 from Accuracy_Plots import plots
 
+from copy import deepcopy
+
 import os
 
 import warnings
@@ -297,6 +299,7 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
     # Restore the parameters from normalizer
     if testing:
         min_max_normalization = load(norm_path)
+
     else:
         min_max_normalization = MinMaxNormalization(train_X)
 
@@ -313,17 +316,12 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
     with tf.Session() as sess:
 
         # Initialize logistic regression object
-        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=150)
+        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=5)
 
         # If testing the model, restore the tensorflow graph
         if testing:
             log_reg.saver.restore(sess, model_path)
             sess.run(log_reg.init_l)
-
-            train_accuracy, train_precision, train_recall = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
-            print("Train acc: {:3f} | Train precision: {:3f} | Train recall: {:3f}".format(train_accuracy,
-                                                                                           train_precision,
-                                                                                           train_recall))
 
             test_accuracy, test_precision, test_recall = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
             print("Test acc: {:5f} | Test precision: {:5f} | Test recall: {:5f}".format(test_accuracy,
@@ -374,21 +372,25 @@ if __name__ == "__main__":
     random_seed(8)
 
     # Paths for MacOS Mojave
-    # path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of data
-    # model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
-    # norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
+    path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of data
+    model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
+    norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
 
     # Paths for Ubuntu 18.04
-    path = '/home/rui/Documents/logistic_regression_tf/data/0_time_data.csv'    # Location of data
-    model_path = '/home/rui/Documents/logistic_regression_tf/checkpoints/test.ckpt'
-    norm_path = '/home/rui/Documents/logistic_regression_tf/pickles/norm.pickle'
+    # path = '/home/rui/Documents/logistic_regression_tf/data/0_time_data.csv'    # Location of data
+    # model_path = '/home/rui/Documents/logistic_regression_tf/checkpoints/test.ckpt'
+    # norm_path = '/home/rui/Documents/logistic_regression_tf/pickles/norm.pickle'
 
     label_name = '175642864_label'
-    train_size = 0.9    # Train / test split size
-    testing = False    # Are you training or testing
+    testing = True    # Are you training or testing
+
+    if testing:
+        train_size = 0
+    else:
+        train_size = 0.9  # Train / test split size
 
     Pred_train, Train_y, Pred_test, Test_y, Weights, Biases = simulation(path, model_path, norm_path, label_name,
                                                                          train_size, testing)
 
     # Plots train data from 0 to 400
-    plots(Pred_train, Train_y, 0, 400)
+    plots(Pred_test, Test_y, 0, 400)
