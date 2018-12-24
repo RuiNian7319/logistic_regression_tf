@@ -32,8 +32,11 @@ from suncor_ts_tester import suncor_early_pred
 warnings.filterwarnings('ignore')
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 
-path = '/home/rui/Documents/logistic_regression_tf/'
-# path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
+# Ubuntu 18.04
+# path = '/home/rui/Documents/logistic_regression_tf/'
+
+# MacOS
+path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
 
 """
 Parsing section, to define parameters to be ran in the code
@@ -49,7 +52,7 @@ parser.add_argument("--train_size", help="% of whole data set used for training"
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument('--lambd', help="regularization term", default=0.0005)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=128)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=20)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=25)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
@@ -67,7 +70,7 @@ Logistic Regression
 """
 
 # Seed for reproducability
-seed = 8
+seed = 18
 np.random.seed(seed)
 tf.set_random_seed(seed)
 
