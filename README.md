@@ -24,7 +24,7 @@ Dec 11th (using threshold = 15):
   **Activation = 0.95**
   - Precision: 30% | Recall = 79% | Did not catch: 83719, 89117, 159718, 230650, 246616, 345358, 372290, 394527, 459983, 521204
 
-To increase recall, I am going to add more negative examples
+To increase recall, add more negative examples
 
 <br>
 
