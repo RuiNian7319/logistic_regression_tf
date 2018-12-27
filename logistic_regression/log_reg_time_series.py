@@ -8,7 +8,7 @@ Patch notes:  Added tensorboard, saver
               Fixed MinMaxNormalization, now test data is normalized with respect to train
               Added DeviationVariable class to identify which variables are outside their expected ranges
 
-Date of last edit: Dec-14th-2018
+Date of last edit: Dec-27th-2018
 Rui Nian
 
 Current issues: -
@@ -46,13 +46,13 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/diabetes_dataset.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9999)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument('--lambd', help="regularization term", default=0.0005)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=128)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=20)
+parser.add_argument('--lambd', help="regularization term", default=0.001)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=32)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=200)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
@@ -207,11 +207,11 @@ test_y = labels[train_values:].reshape(1, test_X.shape[1])
 For feeding t and t - 1
 """
 
-train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
-train_y = train_y[:, :-1]
-
-test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
-test_y = test_y[:, :-1]
+# train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
+# train_y = train_y[:, :-1]
+#
+# test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
+# test_y = test_y[:, :-1]
 
 # Neural network parameters
 input_size = train_X.shape[0]
@@ -292,7 +292,7 @@ if Args['test']:
         Predictions_train = sess.run(pred, feed_dict={x: train_X, y: train_y})
         print("Training data set: {:5f} | Test data set: {:5f}".format(train_accuracy, test_accuracy))
 
-        Precision, Recall = sess.run([prec_op, recall_op], feed_dict={x: test_X, y: test_y})
+        Precision, Recall = sess.run([prec_op, recall_op], feed_dict={x: train_X, y: train_y})
         print("The precision is: {:5f} | The recall is: {:5f}".format(Precision, Recall))
 
         # Output weights and biases
