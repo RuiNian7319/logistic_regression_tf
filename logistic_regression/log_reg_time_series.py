@@ -37,7 +37,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 # path = '/home/rui/Documents/logistic_regression_tf/'
 
 # MacOS
-path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
+path = '/Users/ruinian/Documents/logistic_regression_tf/'
 
 """
 Parsing section, to define parameters to be ran in the code
@@ -47,7 +47,7 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/syn_10_data.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9999)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
@@ -174,7 +174,10 @@ def mod_normalization(data):
 
 
 # Loading data
-raw_data = pd.read_csv(Args['data'])
+if Args['test']:
+    raw_data = pd.read_csv(path + 'data/labeled_data.csv')
+else:
+    raw_data = pd.read_csv(Args['data'], header=None)
 
 # Get feature headers
 feature_names = list(raw_data)
