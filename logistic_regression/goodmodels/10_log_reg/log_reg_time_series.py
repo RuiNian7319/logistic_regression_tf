@@ -32,8 +32,8 @@ from suncor_ts_tester import suncor_early_pred
 warnings.filterwarnings('ignore')
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 
-path = '/home/rui/Documents/logistic_regression_tf/'
-# path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
+# path = '/home/rui/Documents/logistic_regression_tf/'
+path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
 
 """
 Parsing section, to define parameters to be ran in the code
@@ -44,14 +44,14 @@ parser = argparse.ArgumentParser(description="Inputs to the logistic regression"
 
 # Arguments
 parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
-parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
+parser.add_argument("--normalization", help="folder with normalization info", default='norm.pickle')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.999)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=16)
 parser.add_argument("--epochs", help="Number of times data should be recycled through", default=250)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
-parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
+parser.add_argument("--model_path", help="Location of saved tensorflow models", default='10time.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
 
 # Test Model

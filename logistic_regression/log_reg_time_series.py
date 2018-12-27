@@ -7,6 +7,7 @@ Patch notes:  Added tensorboard, saver
               Added Precision and Recall metrics
               Fixed MinMaxNormalization, now test data is normalized with respect to train
               Added DeviationVariable class to identify which variables are outside their expected ranges
+              Added prec and recall during training
 
 Date of last edit: Dec-27th-2018
 Rui Nian
@@ -46,13 +47,13 @@ Parsing section, to define parameters to be ran in the code
 parser = argparse.ArgumentParser(description="Inputs to the logistic regression")
 
 # Arguments
-parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/diabetes_dataset.csv')
+parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/labeled_data.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
 parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9999)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
-parser.add_argument('--lambd', help="regularization term", default=0.001)
-parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=32)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=200)
+parser.add_argument('--lambd', help="regularization term", default=0.0005)
+parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=512)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=50)
 parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
@@ -207,11 +208,11 @@ test_y = labels[train_values:].reshape(1, test_X.shape[1])
 For feeding t and t - 1
 """
 
-# train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
-# train_y = train_y[:, :-1]
-#
-# test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
-# test_y = test_y[:, :-1]
+train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
+train_y = train_y[:, :-1]
+
+test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
+test_y = test_y[:, :-1]
 
 # Neural network parameters
 input_size = train_X.shape[0]
@@ -228,8 +229,8 @@ train_X = min_max_normalization(train_X)
 test_X = min_max_normalization(test_X)
 
 # Test cases
-assert(np.isnan(train_X).any() == False)
-assert(np.isnan(test_X).any() == False)
+assert(not np.isnan(train_X).any())
+assert(not np.isnan(test_X).any())
 
 # deviation_vars = DeviationVariables(train_X)
 
@@ -326,6 +327,9 @@ else:
 
                 train_accuracy, train_predictions = sess.run([accuracy, pred], feed_dict={x: train_X, y: train_y})
                 test_accuracy, test_predictions = sess.run([accuracy, pred], feed_dict={x: test_X, y: test_y})
+
+                train_prec, train_recall = sess.run([prec_op, recall_op], feed_dict={x: train_X,
+                                                                                     y: train_y})
                 loss_history.append(current_loss)
 
                 if i % 10 == 0:
@@ -333,10 +337,8 @@ else:
                     # Add to summary writer
                     summary_writer.add_summary(summary, i)
 
-                    print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f}".format(epoch + 1,
-                                                                                                current_loss,
-                                                                                                train_accuracy,
-                                                                                                test_accuracy))
+                    print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f} | prec: {:5f} | recall: {:5f}".
+                          format(epoch + 1, current_loss, train_accuracy, test_accuracy, train_prec, train_recall))
 
         if Args['save_graph']:
             save_path = saver.save(sess, Args["model_path"])
