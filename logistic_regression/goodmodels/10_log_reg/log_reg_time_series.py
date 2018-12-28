@@ -33,7 +33,7 @@ warnings.filterwarnings('ignore')
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = '2'
 
 # path = '/home/rui/Documents/logistic_regression_tf/'
-path = '/Users/ruinian/Documents/Logistic_Reg_TF/'
+path = '/Users/ruinian/Documents/logistic_regression_tf/'
 
 """
 Parsing section, to define parameters to be ran in the code
