@@ -49,12 +49,12 @@ parser = argparse.ArgumentParser(description="Inputs to the logistic regression"
 # Arguments
 parser.add_argument("--data", help="Data to be loaded into the model", default=path + 'data/syn_10_data.csv')
 parser.add_argument("--normalization", help="folder with normalization info", default=path + 'pickles/norm.pickle')
-parser.add_argument("--train_size", help="% of whole data set used for training", default=0.9999)
+parser.add_argument("--train_size", help="% of whole data set used for training", default=1)
 parser.add_argument('--lr', help="learning rate for the logistic regression", default=0.003)
 parser.add_argument('--lambd', help="regularization term", default=0.0005)
 parser.add_argument("--minibatch_size", help="mini batch size for mini batch gradient descent", default=512)
-parser.add_argument("--epochs", help="Number of times data should be recycled through", default=50)
-parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.5)
+parser.add_argument("--epochs", help="Number of times data should be recycled through", default=200)
+parser.add_argument("--threshold", help="Threshold for positive classification, norm=0.5", default=0.7)
 parser.add_argument("--tensorboard_path", help="Location of saved tensorboards", default=path + "./tensorboard")
 parser.add_argument("--model_path", help="Location of saved tensorflow models", default=path + 'checkpoints/10time.ckpt')
 parser.add_argument("--save_graph", help="Save the current tensorflow computational graph", default=False)
@@ -174,10 +174,7 @@ def mod_normalization(data):
 
 
 # Loading data
-if Args['test']:
-    raw_data = pd.read_csv(path + 'data/labeled_data.csv')
-else:
-    raw_data = pd.read_csv(Args['data'], header=None)
+raw_data = pd.read_csv(Args['data'], header=None)
 
 # Get feature headers
 feature_names = list(raw_data)
@@ -211,11 +208,11 @@ test_y = labels[train_values:].reshape(1, test_X.shape[1])
 For feeding t and t - 1
 """
 
-train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
-train_y = train_y[:, :-1]
-
-test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
-test_y = test_y[:, :-1]
+# train_X = np.concatenate([train_X[:, 0:-1], train_X[:, 1:]], axis=0)
+# train_y = train_y[:, :-1]
+#
+# test_X = np.concatenate([test_X[:, 0:-1], test_X[:, 1:]], axis=0)
+# test_y = test_y[:, :-1]
 
 # Neural network parameters
 input_size = train_X.shape[0]
@@ -328,14 +325,15 @@ else:
                 _, summary = sess.run([optimizer, merge], feed_dict={x: minibatch_train_X, y: minibatch_train_y})
                 current_loss = sess.run(loss, feed_dict={x: minibatch_train_X, y: minibatch_train_y})
 
-                train_accuracy, train_predictions = sess.run([accuracy, pred], feed_dict={x: train_X, y: train_y})
-                test_accuracy, test_predictions = sess.run([accuracy, pred], feed_dict={x: test_X, y: test_y})
+                # Model evaluation
+                if i % 50 == 0:
 
-                train_prec, train_recall = sess.run([prec_op, recall_op], feed_dict={x: train_X,
-                                                                                     y: train_y})
-                loss_history.append(current_loss)
+                    train_accuracy, train_predictions = sess.run([accuracy, pred], feed_dict={x: train_X, y: train_y})
+                    test_accuracy, test_predictions = sess.run([accuracy, pred], feed_dict={x: test_X, y: test_y})
 
-                if i % 10 == 0:
+                    train_prec, train_recall = sess.run([prec_op, recall_op], feed_dict={x: train_X,
+                                                                                         y: train_y})
+                    loss_history.append(current_loss)
 
                     # Add to summary writer
                     summary_writer.add_summary(summary, i)
@@ -409,35 +407,3 @@ def dataset_creator(data, columns, path):
 
     data.to_csv(path, index=False)
     return data
-
-
-def k_folds(data, fold_number, train_size=0.8):
-
-    """
-    Inputs
-               data:  Data with shape: [m, Nx]
-        fold_number:  The current k-fold you are on.
-         train_size:  Size of training data.  Test size is 1 - train_size
-    Returns
-        train_X, train_y, test_X, test_y
-    """
-
-    examples = data.shape[0]
-
-    train_shape = int(train_size * examples)
-    test_shape = int(examples - train_shape)
-
-    index_end = test_shape * fold_number
-    index_start = index_end - test_shape
-
-    mask = np.linspace(index_start, index_end, index_end - index_start + 1)
-    train_data = np.delete(data, mask, axis=0)
-    test_data = data[index_start:index_end, :]
-
-    train_X = train_data[:, 1:]
-    train_y = train_data[:, 0]
-
-    test_X = test_data[:, 1:]
-    test_y = test_data[:, 0]
-
-    return train_X, test_X, train_y, test_y
