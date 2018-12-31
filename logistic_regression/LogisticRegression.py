@@ -340,10 +340,10 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
                     batch_y = log_reg.train_y[:, batch_index:(batch_index + log_reg.minibatch_size)]
 
                     current_loss = log_reg.train(batch_X, batch_y)
-                    train_accuracy, _, _ = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
-                    test_accuracy, _, _ = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
 
-                    if i % 10 == 0:
+                    if i % int(log_reg.total_batch_number / 3) == 0:
+                        train_accuracy, _, _ = log_reg.model_evaluation(log_reg.train_X, log_reg.train_y)
+                        test_accuracy, _, _ = log_reg.model_evaluation(log_reg.test_X, log_reg.test_y)
                         print("Epoch: {} | loss: {:5f} | train acc: {:5f} | test acc: {:5f}".format(epoch + 1,
                                                                                                     current_loss,
                                                                                                     train_accuracy,
