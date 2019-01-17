@@ -1,9 +1,9 @@
 """
-Logistic Regression Object Patch 1.1
+Logistic Regression Object Patch 1.2
 
-Patch notes:  Great enhancements from existing file
+Patch notes:  Updates to locations
 
-Date of last edit: Dec-20-2018
+Date of last edit: Jan-16-2018
 Rui Nian
 
 Current issues:  Output shape is always one
@@ -316,7 +316,7 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
     with tf.Session() as sess:
 
         # Initialize logistic regression object
-        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=5)
+        log_reg = LogisticRegression(sess, train_X, train_y, test_X, test_y, minibatch_size=16, epochs=25)
 
         # If testing the model, restore the tensorflow graph
         if testing:
@@ -372,17 +372,18 @@ if __name__ == "__main__":
     random_seed(8)
 
     # Paths for MacOS Mojave
-    path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of data
-    model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
-    norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
+    # path = '/Users/ruinian/Documents/Logistic_Reg_TF/data/64_data_sampled.csv'    # Location of data
+    # model_path = '/Users/ruinian/Documents/Logistic_Reg_TF/checkpoints/test.ckpt'
+    # norm_path = '/Users/ruinian/Documents/Logistic_Reg_TF/pickles/norm.pickle'
 
     # Paths for Ubuntu 18.04
-    # path = '/home/rui/Documents/logistic_regression_tf/data/0_time_data.csv'    # Location of data
-    # model_path = '/home/rui/Documents/logistic_regression_tf/checkpoints/test.ckpt'
-    # norm_path = '/home/rui/Documents/logistic_regression_tf/pickles/norm.pickle'
+    path = '/home/rui/Documents/Willowglen/data/test_data1.csv'    # Location of data
+    model_path = '/home/rui/Documents/Willowglen/logistic_regression_tf/checkpoints/test.ckpt'
+    norm_path = '/home/rui/Documents/Willowglen/logistic_regression_tf/pickles/norm.pickle'
 
-    label_name = '175642864_label'
-    testing = True    # Are you training or testing
+    # Beware, for statistical event detection, it includes _630, but for limit, it may not
+    label_name = '175642862_630_label'
+    testing = False    # Are you training or testing
 
     if testing:
         train_size = 0
@@ -393,4 +394,4 @@ if __name__ == "__main__":
                                                                          train_size, testing)
 
     # Plots train data from 0 to 400
-    plots(Pred_test, Test_y, 0, 400)
+    plots(Pred_test, Test_y, 0, 200)
