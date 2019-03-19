@@ -306,12 +306,8 @@ def simulation(data_path, model_path, norm_path, label_name, train_size, testing
     train_X = min_max_normalization(train_X)
     test_X = min_max_normalization(test_X)
 
-    # Restore the parameters from normalizer
-    if testing:
-        min_max_normalization = load(norm_path)
-
-    assert(np.isnan(train_X).any() == False)
-    assert(np.isnan(test_X).any() == False)
+    assert(not np.isnan(train_X).any())
+    assert(not np.isnan(test_X).any())
 
     with tf.Session() as sess:
 
