@@ -104,7 +104,7 @@ class LogisticRegression:
 
         # Tensorflow variables
         self.X = tf.placeholder(dtype=tf.float32, shape=[self.nx, None])
-        self.y = tf.placeholder(dtype=tf.float32, shape=[1, None])
+        self.y = tf.placeholder(dtype=tf.float32, shape=[self.ny, None])
 
         self.W = tf.get_variable('weights', shape=[self.ny, self.nx],
                                  initializer=tf.contrib.layers.xavier_initializer())
